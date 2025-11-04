@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administrador - Sistema de Inventario</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+  body { background-color: #f5f5f5; }
+  .navbar { display: flex; justify-content: space-between; align-items: center; background-color: #5daeea; color: white; padding: 15px 30px; font-size: 20px; }
+  .navbar h1 { font-size: 26px; font-weight: bold; }
+  .navbar .menu { display: flex; gap: 70px; font-size: 18px; }
+  .navbar .menu a { color: white; text-decoration: none; font-weight: bold; }
+  .navbar .menu a:hover { text-decoration: underline; }
+  .container { padding: 20px; display: flex; gap: 20px; }
+  .inventory { flex: 3; background: white; border-radius: 5px; padding: 10px; max-height: 80vh; overflow-y: auto; }
+  .item { display: flex; align-items: center; justify-content: space-between; background-color: #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+  .item-info { flex: 1; font-size: 14px; }
+  .item img { width: 40px; margin-right: 15px; }
+  .controls { flex: 1; display: flex; flex-direction: column; gap: 15px; align-items: center; justify-content: center; }
+  .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; font-size: 16px; width: 120px; text-align: center; }
+  .btn-edit, .btn-add, .btn-delete, .btn-confirm-add, .btn-confirm-delete { background-color: #2196f3; }
+  .btn-cancel { background-color: #aaa; }
+  .btn-save { background-color: #5daeea; }
+  .search-box { margin-bottom: 20px; }
+  .search-box input { width: 250px; padding: 8px; border: 1px solid #aaa; border-radius: 4px; }
+  .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
+  .modal-content { background-color: white; padding: 30px; border-radius: 8px; width: 450px; box-shadow:0 4px 8px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto; }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px; }
+  .modal-header h2 { color: #5daeea; font-size: 22px; }
+  .close-btn { background:none; border:none; font-size:24px; cursor:pointer; color:#777; }
+  .form-group { margin-bottom:15px; }
+  .form-group label { display:block; margin-bottom:5px; font-weight:bold; color:#555; }
+  .form-group input, .form-group select { width:100%; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:16px; }
+  .image-preview { display:flex; flex-direction:column; align-items:center; margin-bottom:15px; padding:10px; border:1px dashed #ddd; border-radius:4px; background-color:#f9f9f9; }
+  .image-preview img { width:100px; height:100px; object-fit:cover; border-radius:4px; margin-bottom:10px; border:1px solid #ddd; }
+  .image-upload { display:flex; align-items:center; gap:10px; }
+  .image-upload label { background-color: #5daeea; color:white; padding:8px 15px; border-radius:4px; cursor:pointer; font-size:14px; }
+  .image-upload input[type="file"] { display:none; }
+  .modal-buttons { display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
+  .warning-text { color:#f32121; font-weight:bold; margin-bottom:20px; text-align:center; }
+  .separator { height:1px; background-color:#ddd; margin:20px 0; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <h1>SISTEMA DE INVENTARIO</h1>
+  <div class="menu">
+    <a href="#">VENTA</a>
+    <a href="#">REPORTES</a>
+    <a href="#">USUARIOS</a>
+    <a href="#">⮐ SALIR</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="inventory" id="inventoryList">
+    <div class="search-box">
+      <input type="text" placeholder="🔍 Búsqueda" id="searchInput">
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-add" onclick="openAddModal()">AGREGAR</button>
+    <button class="btn btn-delete" onclick="openDeleteModal()">ELIMINAR</button>
+  </div>
+</div>
+
+<!-- Modal de agregar / editar producto -->
+<div id="productModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="productModalTitle">AGREGAR PRODUCTO</h2>
+      <button class="close-btn" onclick="closeProductModal()">&times;</button>
+    </div>
+    <form id="productForm">
+      <div class="form-group">
+        <label for="productName">NOMBRE</label>
+        <input type="text" id="productName" required>
+      </div>
+      <div class="form-group">
+        <label for="productType">TIPO</label>
+        <select id="productType" required>
+          <option value="">Seleccionar tipo</option>
+          <option value="general">general</option>
+          <option value="bebida">bebida</option>
+          <option value="snack">snack</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="productDesc">DESCRIPCIÓN</label>
+        <input type="text" id="productDesc" required>
+      </div>
+      <div class="form-group">
+        <label for="productStock">STOCK</label>
+        <input type="number" id="productStock" min="0" required>
+      </div>
+      <div class="form-group">
+        <label for="productStockMin">STOCK MÍNIMO</label>
+        <input type="number" id="productStockMin" min="0" required>
+      </div>
+      <div class="form-group">
+        <label for="productPrice">PRECIO</label>
+        <input type="number" id="productPrice" min="0" step="0.01" required>
+      </div>
+
+      <div class="image-preview">
+        <img id="productImagePreview" src="" alt="Vista previa">
+        <div class="image-upload">
+          <label for="productImage">Seleccionar imagen</label>
+          <input type="file" id="productImage" accept="image/*">
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeProductModal()">CANCELAR</button>
+        <button type="submit" class="btn btn-save" id="productSubmitBtn">AGREGAR</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de eliminar producto -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>ELIMINAR</h2>
+      <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
+    </div>
+    <form id="deleteForm">
+      <div class="warning-text">⚠️ Esta acción no se puede deshacer</div>
+      <div class="form-group">
+        <label for="deleteId">ID ARTÍCULO</label>
+        <input type="text" id="deleteId" required>
+      </div>
+      <div class="separator"></div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeDeleteModal()">CANCELAR</button>
+        <button type="submit" class="btn btn-confirm-delete">ELIMINAR</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let products = [];
+let editingProductId = null;
+
+// ------------------- FETCH BACKEND -------------------
+async function loadProductsFromDB(){
+  try{
+    const res = await fetch('http://localhost:3000/productos');
+    products = await res.json();
+    renderProducts();
+  }catch(err){
+    console.error("Error al cargar productos:", err);
+    alert("No se pudieron cargar los productos");
+  }
+}
+
+// ------------------- RENDER -------------------
+function renderProducts(){
+  const container = document.getElementById('inventoryList');
+  container.innerHTML = `<div class="search-box">
+    <input type="text" placeholder="🔍 Búsqueda" id="searchInput">
+  </div>`;
+  products.forEach(p=>{
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-info"><strong>${p.nombre}</strong> — ID: ${p.id_producto} — CANTIDAD: ${p.stock} — PRECIO: $${p.precio}</div>
+      <img src="${p.image || 'https://via.placeholder.com/100'}" alt="${p.nombre}">
+      <button class="btn btn-edit" onclick="openEditModal(${p.id_producto})">EDITAR</button>
+    `;
+    container.appendChild(div);
+  });
+
+  document.getElementById('searchInput').addEventListener('input', function(e){
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll('.item').forEach(item=>{
+      const text = item.querySelector('.item-info').textContent.toLowerCase();
+      item.style.display = text.includes(term)?'flex':'none';
+    });
+  });
+}
+
+// ------------------- MODALES -------------------
+function openAddModal(){
+  editingProductId = null;
+  document.getElementById('productModalTitle').textContent = "AGREGAR PRODUCTO";
+  document.getElementById('productSubmitBtn').textContent = "AGREGAR";
+  document.getElementById('productForm').reset();
+  document.getElementById('productImagePreview').src = "https://via.placeholder.com/100";
+  document.getElementById('productModal').style.display = 'flex';
+}
+
+function openEditModal(id){
+  const product = products.find(p=>p.id_producto==id);
+  if(!product) return;
+  editingProductId = id;
+  document.getElementById('productModalTitle').textContent = "EDITAR PRODUCTO";
+  document.getElementById('productSubmitBtn').textContent = "GUARDAR";
+  document.getElementById('productName').value = product.nombre;
+  document.getElementById('productType').value = product.tipo;
+  document.getElementById('productDesc').value = product.descripcion;
+  document.getElementById('productStock').value = product.stock;
+  document.getElementById('productStockMin').value = product.stock_minimo;
+  document.getElementById('productPrice').value = product.precio;
+  document.getElementById('productImagePreview').src = product.image || "https://via.placeholder.com/100";
+  document.getElementById('productModal').style.display = 'flex';
+}
+
+function closeProductModal(){ document.getElementById('productModal').style.display='none'; }
+function openDeleteModal(){ document.getElementById('deleteForm').reset(); document.getElementById('deleteModal').style.display='flex'; }
+function closeDeleteModal(){ document.getElementById('deleteModal').style.display='none'; }
+
+window.addEventListener('click', function(e){
+  if(e.target===document.getElementById('productModal')) closeProductModal();
+  if(e.target===document.getElementById('deleteModal')) closeDeleteModal();
+});
+
+// ------------------- IMAGEN -------------------
+document.getElementById('productImage').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(ev){ document.getElementById('productImagePreview').src = ev.target.result; };
+    reader.readAsDataURL(file);
+  }
+});
+
+// ------------------- AGREGAR / EDITAR -------------------
+document.getElementById('productForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const nombre = document.getElementById('productName').value;
+  const tipo = document.getElementById('productType').value;
+  const descripcion = document.getElementById('productDesc').value;
+  const stock = parseInt(document.getElementById('productStock').value);
+  const stock_minimo = parseInt(document.getElementById('productStockMin').value);
+  const precio = parseFloat(document.getElementById('productPrice').value).toFixed(2);
+  const image = document.getElementById('productImagePreview').src;
+
+  try{
+    if(editingProductId){ // EDITAR
+      await fetch(`http://localhost:3000/productos/${editingProductId}`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({nombre,tipo,descripcion,stock,stock_minimo,precio,image})
+      });
+      alert('Producto actualizado');
+    } else { // AGREGAR
+      await fetch('http://localhost:3000/productos', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({nombre,tipo,descripcion,stock,stock_minimo,precio,image})
+      });
+      alert('Producto agregado');
+    }
+    await loadProductsFromDB();
+    closeProductModal();
+  }catch(err){ console.error(err); alert('Error al guardar producto'); }
+});
+
+// ------------------- ELIMINAR -------------------
+document.getElementById('deleteForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const id = parseInt(document.getElementById('deleteId').value);
+  try{
+    await fetch(`http://localhost:3000/productos/${id}`, { method:'DELETE' });
+    alert('Producto eliminado');
+    await loadProductsFromDB();
+    closeDeleteModal();
+  }catch(err){ console.error(err); alert('Error al eliminar'); }
+});
+
+// ------------------- INICIO -------------------
+loadProductsFromDB();
+</script>
+
+</body>
+</html>

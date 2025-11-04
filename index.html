@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Inventario</title>
+  <link rel="stylesheet" href="./front/styles.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="left-panel"></div>
+
+    <div class="right-panel">
+      <div class="login-form">
+        <img src="front/img/inventariando.jpg" alt="Inventariando" />
+
+        <div class="form-group" id="userGroup">
+          <input type="text" id="userId" placeholder="USUARIO" />
+          <div class="validation-message" id="userMessage"></div>
+        </div>
+
+        <div class="form-group" id="passwordGroup">
+          <div class="password-container">
+            <input type="password" id="password" placeholder="CONTRASEÑA" />
+            <button type="button" class="toggle-password" id="togglePassword">👁️</button>
+          </div>
+          <div class="validation-message" id="passwordMessage"></div>
+        </div>
+
+        <button class="btn-login" id="loginBtn" disabled>
+          <span class="btn-text">INICIAR SESIÓN</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== ELEMENTOS =====================
+    const userIdInput = document.getElementById("userId");
+    const passwordInput = document.getElementById("password");
+    const togglePasswordBtn = document.getElementById("togglePassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const userGroup = document.getElementById("userGroup");
+    const passwordGroup = document.getElementById("passwordGroup");
+    const userMessage = document.getElementById("userMessage");
+    const passwordMessage = document.getElementById("passwordMessage");
+
+    // ===================== VALIDACIONES =====================
+    userIdInput.addEventListener("input", () => {
+      validateUsername();
+      updateLoginButton();
+    });
+
+    passwordInput.addEventListener("input", () => {
+      validatePassword();
+      updateLoginButton();
+    });
+
+    togglePasswordBtn.addEventListener("click", () => {
+      const type =
+        passwordInput.getAttribute("type") === "password" ? "text" : "password";
+      passwordInput.setAttribute("type", type);
+      togglePasswordBtn.textContent = type === "password" ? "👁️" : "🔒";
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !loginBtn.disabled) {
+        login();
+      }
+    });
+
+    // ===================== VALIDACIÓN USUARIO =====================
+    function validateUsername() {
+      const value = userIdInput.value.trim();
+      if (value.length === 0) {
+        setValidationState(userGroup, userMessage, "invalid", "El nombre de usuario es requerido");
+        return false;
+      }
+      if (value.length < 3) {
+        setValidationState(userGroup, userMessage, "invalid", "Mínimo 3 caracteres");
+        return false;
+      }
+      setValidationState(userGroup, userMessage, "valid", "Usuario válido");
+      return true;
+    }
+
+    // ===================== VALIDACIÓN CONTRASEÑA =====================
+    function validatePassword() {
+      const value = passwordInput.value;
+      if (value.length === 0) {
+        setValidationState(passwordGroup, passwordMessage, "invalid", "La contraseña es requerida");
+        return false;
+      }
+      if (value.length < 4) {
+        setValidationState(passwordGroup, passwordMessage, "invalid", "Mínimo 4 caracteres");
+        return false;
+      }
+      setValidationState(passwordGroup, passwordMessage, "valid", "Contraseña válida");
+      return true;
+    }
+
+    function setValidationState(group, message, state, text) {
+      group.className = `form-group ${state}`;
+      message.className = `validation-message ${state}`;
+      message.textContent = text;
+    }
+
+    // ===================== FUNCIÓN DE LOGIN =====================
+    async function login() {
+      const nombre_usuario = userIdInput.value.trim();
+      const contraseña = passwordInput.value.trim();
+
+      try {
+        const response = await fetch("http://localhost:3000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre_usuario, contraseña }),
+        });
+
+        if (!response.ok) {
+          alert("❌ Error de conexión con la base de datos o el servidor.");
+          return;
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert("✅ Conexión exitosa. Bienvenido al sistema.");
+          window.location.href = "Interfaz.html"; // Redirigir al sistema
+        } else {
+          alert("⚠️ Usuario o contraseña incorrectos.");
+        }
+      } catch (error) {
+        console.error("Error al conectar con el backend:", error);
+        alert("❌ No se pudo conectar con el servidor Node.js.");
+      }
+    }
+
+    // ===================== HABILITAR BOTÓN =====================
+    function updateLoginButton() {
+      const validUser = validateUsername();
+      const validPass = validatePassword();
+      loginBtn.disabled = !(validUser && validPass);
+    }
+
+    // ===================== PRUEBA DE CONEXIÓN A LA BD =====================
+    async function testConnection() {
+      try {
+        const res = await fetch("http://localhost:3000/api/auth");
+        if (res.ok) {
+          console.log("✅ Servidor y base de datos conectados.");
+        } else {
+          alert("⚠️ El backend no responde. Verifica el servidor Node.js.");
+        }
+      } catch {
+        alert("❌ No se pudo conectar con el backend Node.js (puerto 3000).");
+      }
+    }
+
+    window.onload = testConnection;
+    loginBtn.addEventListener("click", login);
+  </script>
+</body>
+</html>
