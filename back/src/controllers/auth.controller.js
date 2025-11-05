@@ -17,14 +17,13 @@ export const login = async (req, res) => {
       [nombre_usuario]
     );
 
-    // Si no existe el usuario
     if (rows.length === 0) {
       return res.json({ success: false, message: "Usuario no encontrado" });
     }
 
     const user = rows[0];
 
-    // Si la contraseña no coincide (usa bcrypt si está encriptada)
+    // Validar contraseña (bcrypt)
     const passwordMatch =
       user.contraseña.startsWith("$2b$")
         ? await bcrypt.compare(contraseña, user.contraseña)
@@ -41,6 +40,7 @@ export const login = async (req, res) => {
       user: {
         id_usuario: user.id_usuario,
         nombre_usuario: user.nombre_usuario,
+        rol: user.rol // <--- IMPORTANTE
       },
     });
   } catch (error) {

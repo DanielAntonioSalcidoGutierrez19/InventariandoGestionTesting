@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Administrador - Sistema de Inventario</title>
+  <link rel="stylesheet" href="./front/styles.css">
+</head>
+<body>
+  <!-- Barra superior -->
+  <div class="navbar">
+    <h1>SISTEMA DE INVENTARIO</h1>
+    <div class="menu">
+      <a href="Interfazsupervisor.html">INVENTARIO</a>
+      <a href="SistemaVentasSupervisor.html">VENTA</a>
+      <a href="ReportesSupervisor.html">REPORTES</a>
+      <a href="index.html">⮐ SALIR</a>
+    </div>
+  </div>
+
+  <!-- Contenedor -->
+  <div class="container">
+    <!-- Lista de productos -->
+    <div class="inventory" id="inventoryList">
+      <div class="search-box">
+        <input type="text" placeholder="🔍 Búsqueda" id="searchInput">
+      </div>
+      <div id="dbItemsAnchor"></div>
+    </div>
+
+    <!-- Botones -->
+    <div class="controls">
+      <button class="btn btn-add" onclick="openAddModal()">AGREGAR</button>
+      <button class="btn btn-delete" onclick="openDeleteModal()">ELIMINAR</button>
+    </div>
+  </div>
+
+  <!-- Modal editar -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>EDITAR PRODUCTO</h2>
+        <button class="close-btn" onclick="closeEditModal()">&times;</button>
+      </div>
+      <form id="editForm" enctype="multipart/form-data">
+        <div class="form-group"><label for="editName">NOMBRE</label><input type="text" id="editName" required></div>
+
+        <div class="form-group">
+          <label for="editTipo">TIPO</label>
+          <select id="editTipo" required></select>
+        </div>
+
+        <div class="form-group"><label for="editDescripcion">DESCRIPCIÓN</label><input type="text" id="editDescripcion" required></div>
+        <div class="form-group"><label for="editQuantity">STOCK</label><input type="number" id="editQuantity" min="0" max="50" required></div>
+        <div class="form-group"><label for="editStockMinimo">STOCK MÍNIMO</label><input type="number" id="editStockMinimo" min="0" required></div>
+        <div class="form-group"><label for="editPrice">PRECIO</label><input type="number" id="editPrice" min="0" step="0.01" required></div>
+
+        <!-- NUEVA IMAGEN OPCIONAL EN EDITAR -->
+        <div class="form-group">
+          <label for="editImage">NUEVA IMAGEN (opcional)</label>
+          <input type="file" id="editImage" name="imagen" accept="image/*">
+        </div>
+
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="closeEditModal()">CANCELAR</button>
+          <button type="submit" class="btn btn-save">GUARDAR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal agregar -->
+  <div id="addModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>AGREGAR PRODUCTO</h2>
+        <button class="close-btn" onclick="closeAddModal()">&times;</button>
+      </div>
+      <form id="addForm" enctype="multipart/form-data">
+        <div class="form-group"><label for="addName">NOMBRE</label><input type="text" id="addName" required></div>
+
+        <div class="form-group">
+          <label for="addTipo">TIPO</label>
+          <select id="addTipo" required></select>
+        </div>
+
+        <div class="form-group"><label for="addDescripcion">DESCRIPCIÓN</label><input type="text" id="addDescripcion" required></div>
+        <div class="form-group"><label for="addQuantity">STOCK</label><input type="number" id="addQuantity" min="0" max="50" required></div>
+        <div class="form-group"><label for="addStockMinimo">STOCK MÍNIMO</label><input type="number" id="addStockMinimo" min="0" required></div>
+        <div class="form-group"><label for="addPrice">PRECIO</label><input type="number" id="addPrice" min="0" step="0.01" required></div>
+
+        <div class="form-group"><label for="addImage">IMAGEN</label><input type="file" id="addImage" name="imagen" accept="image/*" required></div>
+
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="closeAddModal()">CANCELAR</button>
+          <button type="submit" class="btn btn-confirm-add">AGREGAR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal eliminar -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header delete-modal-header">
+        <h2>ELIMINAR</h2>
+        <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <form id="deleteForm">
+        <div class="warning-text">⚠️ Esta acción no se puede deshacer</div>
+        <div class="form-group">
+          <label for="deleteId">ID ARTÍCULO</label>
+          <input type="text" id="deleteId" required>
+        </div>
+        <div class="separator"></div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="closeDeleteModal()">CANCELAR</button>
+          <button type="submit" class="btn btn-confirm-delete">ELIMINAR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://localhost:3000/api/productos";
+
+    function createItemElement(p) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.dataset.id = p.id_producto;
+      div.dataset.tipo = p.tipo ?? "";
+      div.dataset.descripcion = p.descripcion ?? "";
+
+      const info = document.createElement("div");
+      info.className = "item-info";
+      const precioTxt = Number(p.precio ?? 0).toFixed(2);
+      info.innerHTML = `<strong>${p.nombre}</strong> — ID: ${p.id_producto} — CANTIDAD: ${p.stock} — STOCK MÍNIMO: ${p.stock_minimo} — PRECIO: $${precioTxt}`;
+
+      const img = document.createElement("img");
+      img.src = p.imagen ? ("http://localhost:3000" + p.imagen) : "";
+      img.alt = p.nombre || "producto";
+      img.style.width = "50px";
+      img.style.height = "50px";
+      img.style.objectFit = "contain";
+      img.style.marginLeft = "15px";
+
+      const btn = document.createElement("button");
+      btn.className = "btn btn-edit";
+      btn.textContent = "EDITAR";
+      btn.onclick = () => openEditModal(btn);
+
+      div.appendChild(info);
+      if (p.imagen) div.appendChild(img);
+      div.appendChild(btn);
+
+      return div;
+    }
+
+    async function loadProductos() {
+      try {
+        const res = await fetch(API_URL);
+        const productos = await res.json();
+
+        const anchor = document.getElementById("dbItemsAnchor");
+        anchor.innerHTML = "";
+
+        if (!productos.length) {
+          anchor.innerHTML = `<p style="text-align:center; padding:1rem;">No hay productos registrados.</p>`;
+          return;
+        }
+
+        productos.forEach(p => anchor.appendChild(createItemElement(p)));
+      } catch (err) {
+        console.error("Error al cargar productos:", err);
+      }
+    }
+
+    document.getElementById("searchInput").addEventListener("input", async (e) => {
+      const term = e.target.value.trim();
+      try {
+        const url = term ? `${API_URL}?search=${encodeURIComponent(term)}` : API_URL;
+        const res = await fetch(url);
+        const productos = await res.json();
+
+        const anchor = document.getElementById("dbItemsAnchor");
+        anchor.innerHTML = "";
+
+        if (!productos.length) {
+          anchor.innerHTML = `<p style="padding:1rem; text-align:center;">No se encontraron productos.</p>`;
+          return;
+        }
+
+        productos.forEach((p) => anchor.appendChild(createItemElement(p)));
+      } catch (error) {
+        console.error("Error al buscar productos:", error);
+      }
+    });
+
+    async function openAddModal(){
+      await loadTiposEnum();
+      document.getElementById('addModal').style.display='flex';
+    }
+    function closeAddModal(){ document.getElementById('addModal').style.display='none'; }
+
+    async function openEditModal(btn){
+      const item = btn.closest('.item');
+      const infoText = item.querySelector('.item-info').textContent;
+      const nombreMatch = infoText.match(/^\s*(.*?)\s*—/);
+      const cantidadMatch = infoText.match(/CANTIDAD:\s*(\d+)/);
+      const stockMinMatch = infoText.match(/STOCK MÍNIMO:\s*(\d+)/);
+      const precioMatch = infoText.match(/PRECIO:\s*\$(\d+(?:\.\d+)?)/);
+
+      document.getElementById('editName').value = (nombreMatch ? nombreMatch[1] : "").trim();
+      document.getElementById('editQuantity').value = cantidadMatch ? cantidadMatch[1] : 0;
+      document.getElementById('editStockMinimo').value = stockMinMatch ? stockMinMatch[1] : 0;
+      document.getElementById('editPrice').value = precioMatch ? precioMatch[1] : 0;
+
+      await loadTiposEnumEdit(item.dataset.tipo || "");
+      document.getElementById('editDescripcion').value = item.dataset.descripcion || "";
+      document.getElementById('editForm').dataset.id = item.dataset.id;
+      document.getElementById('editImage').value = ""; // limpia selección previa
+      document.getElementById('editModal').style.display='flex';
+    }
+
+    function closeEditModal(){ document.getElementById('editModal').style.display='none'; }
+    function openDeleteModal(){ document.getElementById('deleteModal').style.display='flex'; }
+    function closeDeleteModal(){ document.getElementById('deleteModal').style.display='none'; }
+
+    // ADD: FormData con imagen obligatoria
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const stockVal = Number(addQuantity.value || 0);
+      if (stockVal > 50) {
+        alert("El STOCK máximo permitido es 50.");
+        addQuantity.value = 50;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("nombre", addName.value);
+      formData.append("tipo", addTipo.value);
+      formData.append("descripcion", addDescripcion.value);
+      formData.append("stock", addQuantity.value);
+      formData.append("stock_minimo", addStockMinimo.value);
+      formData.append("precio", addPrice.value);
+      formData.append("imagen", document.getElementById("addImage").files[0]);
+
+      const res = await fetch(API_URL, { method: 'POST', body: formData });
+      const j = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(j.message || 'Error al agregar producto');
+      alert('✅ Producto agregado correctamente');
+      await loadProductos();
+      closeAddModal();
+      e.target.reset();
+    });
+
+    // EDIT: FormData con imagen OPCIONAL
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.dataset.id;
+
+      const stockVal = Number(editQuantity.value || 0);
+      if (stockVal > 50) {
+        alert("El STOCK máximo permitido es 50.");
+        editQuantity.value = 50;
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("nombre", editName.value);
+      formData.append("tipo", editTipo.value);
+      formData.append("descripcion", editDescripcion.value);
+      formData.append("stock", editQuantity.value);
+      formData.append("stock_minimo", editStockMinimo.value);
+      formData.append("precio", editPrice.value);
+      const newImg = document.getElementById("editImage").files[0];
+      if (newImg) formData.append("imagen", newImg);
+
+      const res = await fetch(`${API_URL}/${id}`, { method: 'PUT', body: formData });
+      const j = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(j.message || 'Error al actualizar producto');
+      alert('✅ Producto actualizado correctamente');
+      await loadProductos();
+      closeEditModal();
+    });
+
+    // DELETE
+    document.getElementById('deleteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = deleteId.value.trim();
+      if (!id) { alert('Ingresa un ID válido'); return; }
+      try {
+        const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        const j = await res.json().catch(()=>({}));
+        if (!res.ok) throw new Error(j.message || 'Error al eliminar producto');
+        alert('🗑️ Producto eliminado correctamente');
+        const card = document.querySelector(`.item[data-id='${id}']`);
+        if (card) card.remove();
+        closeDeleteModal();
+      } catch (err) {
+        console.error('❌ deleteForm:', err);
+        alert(err.message);
+      }
+    });
+
+    async function loadTiposEnum(){
+      try{
+        const res = await fetch("http://localhost:3000/api/productos/tipos");
+        const tipos = await res.json();
+        const sel = document.getElementById("addTipo");
+        sel.innerHTML = "";
+        tipos.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          sel.appendChild(opt);
+        });
+      }catch(err){}
+    }
+
+    async function loadTiposEnumEdit(selectedTipo){
+      try{
+        const res = await fetch("http://localhost:3000/api/productos/tipos");
+        const tipos = await res.json();
+        const sel = document.getElementById("editTipo");
+        sel.innerHTML = "";
+        tipos.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          if(selectedTipo === t) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }catch(err){}
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await loadProductos();
+      await loadTiposEnum();
+    });
+  </script>
+</body>
+</html>

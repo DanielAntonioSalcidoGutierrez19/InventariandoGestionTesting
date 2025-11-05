@@ -11,14 +11,14 @@
   <div class="navbar">
     <h1>SISTEMA DE VENTA</h1>
     <div class="menu">
-      <a href="Reportes.html">REPORTES</a>
+      <a href="SistemaVentasCajero.html">VENTA</a>
+      <a href="ReportesCajero.html">REPORTES</a>
       <a href="index.html">⮐ SALIR</a>
     </div>
   </div>
 
   <!-- Contenedor principal -->
   <div class="sales-container">
-    <!-- Panel izquierdo -->
     <div class="categories-panel" id="categoriesPanel">
       <div class="search-box">
         <input type="text" placeholder="🔍 Búsqueda de productos..." id="searchProducts" />
@@ -34,7 +34,6 @@
         <button class="category-btn abarrotes" onclick="filterByCategory('ABARROTES')"><span>ABARROTES</span></button>
       </div>
 
-      <!-- Lista de productos -->
       <div class="products-list" id="productsList"></div>
     </div>
 
@@ -45,13 +44,13 @@
     </div>
   </div>
 
-  <!-- Panel del total -->
+  <!-- Panel total -->
   <div class="total-panel">
     <div class="total-label">TOTAL A PAGAR</div>
     <div class="total-amount" id="totalAmount">$0.00</div>
   </div>
 
-  <!-- Botón Ticket -->
+  <!-- Botón ticket -->
   <div class="ticket-button-right">
     <button class="btn-ticket-right" onclick="generateTicket()">TICKET</button>
   </div>
@@ -90,7 +89,15 @@
     </div>
   </div>
 
+  <!-- ====================== -->
+  <!-- SCRIPT PRINCIPAL -->
+  <!-- ====================== -->
   <script>
+    // FILTRAR POR CATEGORIA
+function filterByCategory(category) {
+  const filtered = productos.filter(p => p.tipo === category);
+  renderProducts(filtered);
+}
     const API_PRODUCTOS = "http://localhost:3000/api/productos";
     const API_VENTA = "http://localhost:3000/api/venta";
 
@@ -107,16 +114,6 @@
       hookSearch();
     });
 
-    // ⚠️ Mostrar aviso interno
-    function showSystemWarning(message) {
-      const warning = document.createElement("div");
-      warning.className = "stock-warning";
-      warning.textContent = message;
-      document.body.appendChild(warning);
-      setTimeout(() => warning.remove(), 4000);
-    }
-
-    // Cargar productos desde la BD
     async function loadProducts() {
       try {
         const res = await fetch(API_PRODUCTOS);
@@ -140,7 +137,6 @@
       }
     }
 
-    // Renderizar productos
     function renderProducts(list) {
       const container = document.getElementById("productsList");
       container.innerHTML = "";
@@ -161,7 +157,6 @@
       });
     }
 
-    // Buscar producto
     function hookSearch() {
       document.getElementById("searchProducts").addEventListener("input", (e) => {
         const searchTerm = e.target.value.toLowerCase();
@@ -175,7 +170,16 @@
       });
     }
 
-    // Agregar producto al carrito
+    // ⚠️ AVISO INTERNO DE STOCK BAJO (sin alert())
+    function showSystemWarning(message) {
+      const warning = document.createElement("div");
+      warning.className = "stock-warning";
+      warning.textContent = message;
+      document.body.appendChild(warning);
+      setTimeout(() => warning.remove(), 4000);
+    }
+
+    // 🛒 Agregar al carrito
     function addToCartElement(productElement) {
       const productId = productElement.dataset.id;
       const productName = productElement.querySelector(".product-name").textContent;
@@ -184,7 +188,7 @@
       const stockMin = Number(productsDB[productId]?.stock_minimo ?? 0);
 
       if (currentStock <= 0) {
-        showSystemWarning(`❌ No hay stock disponible de ${productName}`);
+        showSystemWarning(`❌ Sin stock disponible de ${productName}`);
         return;
       }
 
@@ -193,7 +197,7 @@
 
       if (existingItem) {
         if (existingItem.quantity + 1 > currentStock) {
-          showSystemWarning(`⚠️ No hay suficiente stock de ${productName}`);
+          showSystemWarning(`⚠️ No hay suficiente stock de ${productName}. Disponible: ${currentStock}`);
           return;
         }
         existingItem.quantity++;
@@ -210,12 +214,12 @@
       }
 
       const remaining = currentStock - newQuantity;
-      if (remaining <= stockMin)
-        showSystemWarning(`⚠️ ${productName} está llegando al stock mínimo (${remaining} uds).`);
+      if (remaining <= stockMin) showSystemWarning(`⚠️ ${productName} está llegando a su stock mínimo (${remaining} uds).`);
+
       updateCartDisplay();
     }
 
-    // Actualizar carrito
+    // 🧮 Actualizar carrito
     function updateCartDisplay() {
       const cartItemsContainer = document.getElementById("cartItems");
       const totalAmountElement = document.getElementById("totalAmount");
@@ -242,26 +246,25 @@
       totalAmountElement.textContent = `$${total.toFixed(2)}`;
     }
 
-    // Aumentar cantidad
+    // ➕ Aumentar cantidad
     function increaseQuantity(productId) {
       const item = cart.find((i) => i.id === productId);
       const stock = Number(productsDB[productId]?.stock ?? 0);
       const stockMin = Number(productsDB[productId]?.stock_minimo ?? 0);
 
       if (item.quantity + 1 > stock) {
-        showSystemWarning(`⚠️ No hay suficiente stock de ${item.name}`);
+        showSystemWarning(`⚠️ No hay suficiente stock de ${item.name}. Disponible: ${stock}`);
         return;
       }
 
       item.quantity++;
       item.subtotal = item.quantity * item.price;
       const remaining = stock - item.quantity;
-      if (remaining <= stockMin)
-        showSystemWarning(`⚠️ ${item.name} está en stock mínimo (${remaining} uds).`);
+      if (remaining <= stockMin) showSystemWarning(`⚠️ ${item.name} está en stock mínimo (${remaining} uds).`);
       updateCartDisplay();
     }
 
-    // Disminuir cantidad
+    // ➖ Disminuir cantidad
     function decreaseQuantity(productId) {
       const item = cart.find((i) => i.id === productId);
       if (!item) return;
@@ -271,7 +274,7 @@
       updateCartDisplay();
     }
 
-    // Método de pago
+    // 💳 Métodos de pago
     function selectPaymentMethod(method) {
       selectedPaymentMethod = method;
       const cashContainer = document.getElementById("cashInputContainer");
@@ -280,7 +283,6 @@
       changeDisplay.style.display = "none";
     }
 
-    // Calcular cambio
     function calculateChange() {
       const input = document.getElementById("cashAmount");
       const changeAmount = document.getElementById("changeAmount");
@@ -293,7 +295,7 @@
       } else display.style.display = "none";
     }
 
-    // Generar ticket
+    // 🧾 Ticket
     function generateTicket() {
       if (cart.length === 0) return showSystemWarning("🛒 No hay productos en el carrito");
       const ticket = document.getElementById("ticketContent");
@@ -306,9 +308,10 @@
       document.getElementById("ticketModal").style.display = "flex";
     }
 
-    // Registrar venta
+    // 🧾 Registrar venta + imprimir
     async function registerAndPrint() {
       if (!selectedPaymentMethod) return showSystemWarning("Selecciona un método de pago");
+
       try {
         const productosVenta = cart.map(i => ({
           id_producto: parseInt(i.id),
@@ -339,7 +342,6 @@
       }
     }
 
-    // Cerrar ticket
     function closeTicketModal() {
       document.getElementById("ticketModal").style.display = "none";
     }
