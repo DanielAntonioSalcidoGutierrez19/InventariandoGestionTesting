@@ -121,10 +121,28 @@
           <input type="password" id="editUserPassword" placeholder="Nueva contraseña" />
         </div>
         <div class="modal-buttons">
-          <button type="button" class="btn-cancel" id="deleteUserBtn">ELIMINAR</button>
+          <button type="button" class="btn-cancel" id="openDeleteUserConfirmBtn">ELIMINAR</button>
           <button type="submit" class="btn-save">ACTUALIZAR</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal doble confirmación eliminar (ESTILO B: ancho similar) -->
+  <div id="deleteUserConfirmModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header delete-modal-header">
+        <h2>ELIMINAR USUARIO</h2>
+        <button class="close-btn" onclick="closeDeleteUserConfirmModal()">&times;</button>
+      </div>
+      <div class="warning-text" style="margin:8px 0 16px;">
+        ⚠️ Esta acción es <strong>permanente</strong> y no se puede deshacer.
+      </div>
+      <div class="separator"></div>
+      <div class="modal-buttons">
+        <button type="button" class="btn-cancel" onclick="closeDeleteUserConfirmModal()">CANCELAR</button>
+        <button type="button" class="btn-confirm-delete" id="deleteUserBtn">ELIMINAR DEFINITIVAMENTE</button>
+      </div>
     </div>
   </div>
 
@@ -132,9 +150,20 @@
     // ======================
     // Variables globales
     // ======================
-    let currentEditingUser = null;
+    let currentEditingUser = null; // DOM element de la tarjeta clickeada
     const ADMIN_PASSWORD = "admin123";
     const API_URL = "http://localhost:3000/api/usuarios";
+
+    // ======================
+    // Helpers: Alertas internas
+    // ======================
+    function showSystemWarning(message) {
+      const warning = document.createElement("div");
+      warning.className = "system-warning";
+      warning.textContent = message;
+      document.body.appendChild(warning);
+      setTimeout(() => warning.remove(), 4000);
+    }
 
     // ======================
     // Funciones de modales
@@ -155,6 +184,7 @@
     function closePasswordConfirmModal() {
       document.getElementById("passwordConfirmModal").style.display = "none";
     }
+
     function openEditUserModal(userElement) {
       if (!userElement) return;
 
@@ -175,6 +205,13 @@
     function closeEditUserModal() {
       document.getElementById("editUserModal").style.display = "none";
       currentEditingUser = null;
+    }
+
+    function openDeleteUserConfirmModal() {
+      document.getElementById("deleteUserConfirmModal").style.display = "flex";
+    }
+    function closeDeleteUserConfirmModal() {
+      document.getElementById("deleteUserConfirmModal").style.display = "none";
     }
 
     // ======================
@@ -205,119 +242,133 @@
         });
       } catch (error) {
         console.error("Error al cargar usuarios:", error);
+        showSystemWarning("❌ Error al cargar usuarios");
       }
     }
 
     // ======================
     // Agregar usuario
     // ======================
-    document
-      .getElementById("addUserForm")
-      .addEventListener("submit", async function (e) {
-        e.preventDefault();
+    document.getElementById("addUserForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
 
-        const nuevoUsuario = {
-          nombre_usuario: document.getElementById("userEmail").value.split("@")[0],
-          nombre_completo: document.getElementById("userName").value,
-          correo: document.getElementById("userEmail").value,
-          contraseña: document.getElementById("userPassword").value,
-          rol: document.getElementById("userRole").value,
-        };
+      const nombreCompleto = document.getElementById("userName").value.trim();
+      const rol = document.getElementById("userRole").value;
+      const correo = document.getElementById("userEmail").value.trim();
+      const contraseña = document.getElementById("userPassword").value;
 
+      const nuevoUsuario = {
+        nombre_usuario: correo.split("@")[0],
+        nombre_completo: nombreCompleto,
+        correo,
+        contraseña,
+        rol,
+      };
+
+      try {
         const res = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nuevoUsuario),
         });
 
-        if (res.ok) {
-          alert("Usuario agregado correctamente ✅");
-          closeAddUserModal();
-          cargarUsuarios();
-        } else {
-          alert("Error al agregar usuario ❌");
-        }
-      });
+        if (!res.ok) throw new Error();
+
+        showSystemWarning("✅ Usuario agregado correctamente");
+        closeAddUserModal();
+        await cargarUsuarios();
+      } catch {
+        showSystemWarning("❌ Error al agregar usuario");
+      }
+    });
 
     // ======================
     // Confirmar contraseña admin
     // ======================
-    document
-      .getElementById("passwordConfirmForm")
-      .addEventListener("submit", function (e) {
-        e.preventDefault();
-        const adminPassword = document.getElementById("adminPassword").value;
-        const passwordError = document.getElementById("passwordError");
+    document.getElementById("passwordConfirmForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const adminPassword = document.getElementById("adminPassword").value;
+      const passwordError = document.getElementById("passwordError");
 
-        if (adminPassword === ADMIN_PASSWORD) {
-          passwordError.style.display = "none";
-          closePasswordConfirmModal();
-          setTimeout(() => {
-            if (currentEditingUser) openEditUserModal(currentEditingUser);
-          }, 200);
-        } else {
-          passwordError.style.display = "block";
-          document.getElementById("adminPassword").value = "";
-          document.getElementById("adminPassword").focus();
-        }
-      });
+      if (adminPassword === ADMIN_PASSWORD) {
+        passwordError.style.display = "none";
+        closePasswordConfirmModal();
+        setTimeout(() => {
+          if (currentEditingUser) openEditUserModal(currentEditingUser);
+        }, 200);
+      } else {
+        passwordError.style.display = "block";
+        document.getElementById("adminPassword").value = "";
+        document.getElementById("adminPassword").focus();
+      }
+    });
 
     // ======================
     // Editar usuario (actualizar BD)
     // ======================
-    document
-      .getElementById("editUserForm")
-      .addEventListener("submit", async function (e) {
-        e.preventDefault();
+    document.getElementById("editUserForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
 
-        const id = document.getElementById("editUserId").value;
-        const usuarioActualizado = {
-          nombre_completo: document.getElementById("editUserName").value,
-          correo: document.getElementById("editUserEmail").value,
-          rol: document.getElementById("editUserRole").value,
-          contraseña: document.getElementById("editUserPassword").value,
-        };
+      const id = document.getElementById("editUserId").value;
+      const nombre_completo = document.getElementById("editUserName").value.trim();
+      const correo = document.getElementById("editUserEmail").value.trim();
+      const rol = document.getElementById("editUserRole").value;
+      const nuevaPass = document.getElementById("editUserPassword").value;
 
+      const usuarioActualizado = { nombre_completo, correo, rol };
+      if (nuevaPass && nuevaPass.length > 0) {
+        usuarioActualizado.contraseña = nuevaPass;
+      }
+
+      try {
         const res = await fetch(`${API_URL}/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(usuarioActualizado),
         });
 
-        if (res.ok) {
-          alert("Usuario actualizado correctamente ✅");
-          closeEditUserModal();
-          cargarUsuarios();
-        } else {
-          alert("Error al actualizar usuario ❌");
-        }
-      });
+        if (!res.ok) throw new Error();
+
+        showSystemWarning("✅ Usuario actualizado correctamente");
+        closeEditUserModal();
+        await cargarUsuarios();
+      } catch {
+        showSystemWarning("❌ Error al actualizar usuario");
+      }
+    });
 
     // ======================
-    // Eliminar usuario
+    // Abrir confirmación de eliminar desde Edit
+    // ======================
+    document.getElementById("openDeleteUserConfirmBtn").addEventListener("click", function () {
+      openDeleteUserConfirmModal();
+    });
+
+    // ======================
+    // Eliminar usuario (doble confirmación interna)
     // ======================
     document.getElementById("deleteUserBtn").addEventListener("click", async function () {
-  const id = document.getElementById("editUserId").value;
-  const confirmacion = confirm("¿Seguro que deseas eliminar este usuario?");
-  if (!confirmacion) return;
+      const id = document.getElementById("editUserId").value;
+      if (!id) return;
 
-  const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      try {
+        const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error();
 
-  if (res.ok) {
-    alert("Usuario eliminado correctamente 🗑️");
-    closeEditUserModal();
-    cargarUsuarios();
-  } else {
-    alert("Error al eliminar usuario ❌");
-  }
-});
-
+        showSystemWarning("🗑️ Usuario eliminado correctamente");
+        closeDeleteUserConfirmModal();
+        closeEditUserModal();
+        await cargarUsuarios();
+      } catch {
+        showSystemWarning("❌ Error al eliminar usuario");
+      }
+    });
 
     // ======================
     // Cerrar modales al hacer clic fuera
     // ======================
     window.addEventListener("click", function (e) {
-      ["addUserModal", "passwordConfirmModal", "editUserModal"].forEach((id) => {
+      ["addUserModal", "passwordConfirmModal", "editUserModal", "deleteUserConfirmModal"].forEach((id) => {
         const modal = document.getElementById(id);
         if (e.target === modal) modal.style.display = "none";
       });
@@ -328,5 +379,62 @@
     // ======================
     document.addEventListener("DOMContentLoaded", cargarUsuarios);
   </script>
+
+  <style>
+    /* Toast interno de sistema (4s) */
+    .system-warning {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #fff3cd;
+      color: #856404;
+      border: 2px solid #ffeeba;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.25);
+      z-index: 9999;
+      animation: fadeIn 0.25s ease;
+      font-weight: bold;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Encabezado rojo para los modales de eliminación (coincide con Interfaz.html) */
+    .delete-modal-header {
+      background: #ffeded;
+      border-bottom: 1px solid #ffc8c8;
+    }
+    .delete-modal-header h2 {
+      color: #b30000;
+    }
+
+    .warning-text {
+      color: #8a6d3b;
+      background: #fcf8e3;
+      border: 1px solid #faebcc;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .separator {
+      height: 1px;
+      background: #eee;
+      margin: 10px 0 16px;
+    }
+
+    .btn-confirm-delete {
+      background: #d9534f;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-confirm-delete:hover {
+      filter: brightness(0.95);
+    }
+  </style>
 </body>
 </html>

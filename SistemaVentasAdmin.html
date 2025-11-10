@@ -73,12 +73,12 @@
           <button class="payment-btn btn-transfer" onclick="selectPaymentMethod('transferencia')">TRANSFERENCIA</button>
         </div>
 
-        <div class="cash-input-container" id="cashInputContainer">
+        <div class="cash-input-container" id="cashInputContainer" style="display:none;">
           <div class="cash-input-group">
             <label for="cashAmount">MONTO ENTREGADO:</label>
             <input type="number" id="cashAmount" placeholder="0.00" min="0" step="0.01" oninput="calculateChange()" />
           </div>
-          <div class="change-display" id="changeDisplay">
+          <div class="change-display" id="changeDisplay" style="display:none;">
             CAMBIO: $<span id="changeAmount">0.00</span>
           </div>
         </div>
@@ -96,10 +96,11 @@
   <!-- ====================== -->
   <script>
     // FILTRAR POR CATEGORIA
-function filterByCategory(category) {
-  const filtered = productos.filter(p => p.tipo === category);
-  renderProducts(filtered);
-}
+    function filterByCategory(category) {
+      const filtered = productos.filter(p => p.tipo === category);
+      renderProducts(filtered);
+    }
+
     const API_PRODUCTOS = "http://localhost:3000/api/productos";
     const API_VENTA = "http://localhost:3000/api/venta";
 
@@ -152,7 +153,14 @@ function filterByCategory(category) {
         div.innerHTML = `
           <span class="product-name">${p.nombre}</span>
           <span class="product-price">$${Number(p.precio).toFixed(2)}</span>
-          ${p.stock <= p.stock_minimo ? '<div class="stock-low">⚠️ STOCK MÍNIMO</div>' : ""}
+          ${
+            p.stock == 0
+              ? '<div class="stock-low">❌ SIN STOCK</div>'
+              : (p.stock <= p.stock_minimo
+                  ? '<div class="stock-low">⚠️ POCO STOCK</div>'
+                  : ''
+                )
+          }
         `;
         div.addEventListener("click", () => addToCartElement(div));
         container.appendChild(div);
@@ -172,7 +180,7 @@ function filterByCategory(category) {
       });
     }
 
-    // ⚠️ AVISO INTERNO DE STOCK BAJO (sin alert())
+    // ⚠️ AVISO INTERNO (sin alert())
     function showSystemWarning(message) {
       const warning = document.createElement("div");
       warning.className = "stock-warning";
@@ -199,7 +207,7 @@ function filterByCategory(category) {
 
       if (existingItem) {
         if (existingItem.quantity + 1 > currentStock) {
-          showSystemWarning(`⚠️ No hay suficiente stock de ${productName}. Disponible: ${currentStock}`);
+          showSystemWarning(`⚠️ No hay suficiente stock de ${productName}`);
           return;
         }
         existingItem.quantity++;
@@ -276,25 +284,58 @@ function filterByCategory(category) {
       updateCartDisplay();
     }
 
-    // 💳 Métodos de pago
+    // 💳 Métodos de pago (toggle / marca visual)
     function selectPaymentMethod(method) {
       selectedPaymentMethod = method;
       const cashContainer = document.getElementById("cashInputContainer");
       const changeDisplay = document.getElementById("changeDisplay");
-      cashContainer.style.display = method === "efectivo" ? "block" : "none";
-      changeDisplay.style.display = "none";
+
+      const btnCash = document.querySelector(".btn-cash");
+      const btnTransfer = document.querySelector(".btn-transfer");
+
+      // limpiar estado visual
+      btnCash.classList.remove("active-payment");
+      btnTransfer.classList.remove("active-payment");
+
+      if (method === "efectivo") {
+        // marcar EFECTIVO seleccionado
+        btnCash.classList.add("active-payment");
+        cashContainer.style.display = "block";
+        changeDisplay.style.display = "none";
+      } else if (method === "transferencia") {
+        // toggle TRANSFERENCIA
+        if (btnTransfer.classList.contains("active-payment")) {
+          btnTransfer.classList.remove("active-payment");
+          selectedPaymentMethod = ""; // des-selecciona si se vuelve a dar click
+        } else {
+          btnTransfer.classList.add("active-payment");
+        }
+        cashContainer.style.display = "none";
+        changeDisplay.style.display = "none";
+      }
     }
 
+    // 💵 Cálculo de cambio / faltante en efectivo (en vivo)
     function calculateChange() {
       const input = document.getElementById("cashAmount");
-      const changeAmount = document.getElementById("changeAmount");
-      const display = document.getElementById("changeDisplay");
+      const changeDisplay = document.getElementById("changeDisplay");
+
       cashAmount = parseFloat(input.value) || 0;
-      if (cashAmount > 0 && total > 0) {
+
+      if (total > 0 && cashAmount >= 0) {
         change = cashAmount - total;
-        display.style.display = "block";
-        changeAmount.textContent = Math.abs(change).toFixed(2);
-      } else display.style.display = "none";
+        changeDisplay.style.display = "block";
+
+        if (change < 0) {
+          // faltante
+          changeDisplay.innerHTML = `FALTAN: $<span id="changeAmount">${Math.abs(change).toFixed(2)}</span>`;
+        } else {
+          // cambio
+          changeDisplay.innerHTML = `CAMBIO: $<span id="changeAmount">${change.toFixed(2)}</span>`;
+        }
+      } else {
+        changeDisplay.style.display = "none";
+      }
     }
 
     // 🧾 Ticket
@@ -313,6 +354,22 @@ function filterByCategory(category) {
     // 🧾 Registrar venta + imprimir
     async function registerAndPrint() {
       if (!selectedPaymentMethod) return showSystemWarning("Selecciona un método de pago");
+
+      // validar EFECTIVO ANTES DE ENVIAR AL BACKEND
+      if (selectedPaymentMethod === "efectivo") {
+        const input = document.getElementById("cashAmount");
+        cashAmount = parseFloat(input.value) || 0;
+
+        if (cashAmount <= 0) {
+          showSystemWarning("Ingresa el monto entregado en efectivo");
+          return;
+        }
+        if (cashAmount < total) {
+          const faltan = (total - cashAmount).toFixed(2);
+          showSystemWarning(`Faltan $${faltan} pesos.`);
+          return;
+        }
+      }
 
       try {
         const productosVenta = cart.map(i => ({
@@ -334,8 +391,24 @@ function filterByCategory(category) {
         if (!response.ok) throw new Error("Error al registrar venta");
 
         showSystemWarning("✅ Venta registrada correctamente");
+
+        // limpiar estado: carrito, método de pago, efectivo
         cart = [];
         updateCartDisplay();
+
+        // limpiar método de pago y visual
+        selectedPaymentMethod = "";
+        document.querySelector(".btn-cash").classList.remove("active-payment");
+        document.querySelector(".btn-transfer").classList.remove("active-payment");
+
+        // limpiar efectivo
+        const input = document.getElementById("cashAmount");
+        input.value = "";
+        cashAmount = 0;
+        change = 0;
+        document.getElementById("changeDisplay").style.display = "none";
+        document.getElementById("cashInputContainer").style.display = "none";
+
         closeTicketModal();
         await loadProducts();
       } catch (err) {
@@ -367,6 +440,21 @@ function filterByCategory(category) {
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* color base de ambos botones (AZUL) */
+    .payment-btn {
+      background-color: #2196f3 !important;
+      color: white !important;
+      border: 2px solid #1976d2 !important;
+    }
+
+    /* color cuando está seleccionado (VERDE) */
+    .payment-btn.active-payment {
+      background-color: #2ecc71 !important;
+      color: #fff !important;
+      border: 2px solid #27ae60 !important;
+      box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
     }
   </style>
 </body>

@@ -15,6 +15,9 @@
       <div class="login-form">
         <img src="front/img/inventariando.jpg" alt="Inventariando" />
 
+        <!-- ALERTA DENTRO DEL SISTEMA -->
+        <div id="systemAlert" class="system-alert"></div>
+
         <div class="form-group" id="userGroup">
           <input type="text" id="userId" placeholder="USUARIO" />
           <div class="validation-message" id="userMessage"></div>
@@ -35,6 +38,28 @@
     </div>
   </div>
 
+  <style>
+    .system-alert {
+      width: 100%;
+      text-align: center;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      display: none;
+      margin-bottom: 15px;
+    }
+
+    .system-alert.error {
+      background-color: #ffb3b3;
+      color: #8b0000;
+    }
+
+    .system-alert.success {
+      background-color: #b3ffb6;
+      color: #006400;
+    }
+  </style>
+
   <script>
     const userIdInput = document.getElementById("userId");
     const passwordInput = document.getElementById("password");
@@ -45,24 +70,29 @@
     const userMessage = document.getElementById("userMessage");
     const passwordMessage = document.getElementById("passwordMessage");
 
-    // LIMPIAR DESDE EL INICIO Y BORRAR SESIÓN
     window.onload = () => {
       userIdInput.value = "";
       passwordInput.value = "";
       localStorage.removeItem("rol");
-      console.log("Campos limpios, no sesión previa");
     };
 
     userIdInput.addEventListener("input", () => { validateUsername(); updateLoginButton(); });
     passwordInput.addEventListener("input", () => { validatePassword(); updateLoginButton(); });
-
     togglePasswordBtn.addEventListener("click", () => {
       const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
       passwordInput.setAttribute("type", type);
       togglePasswordBtn.textContent = type === "password" ? "👁️" : "🔒";
     });
 
-    document.addEventListener("keydown", (e) => { if (e.key === "Enter" && !loginBtn.disabled) { login(); } });
+    document.addEventListener("keydown", (e) => { if (e.key === "Enter" && !loginBtn.disabled) login(); });
+
+    function showSystemAlert(message, type = "error") {
+      const alertBox = document.getElementById("systemAlert");
+      alertBox.textContent = message;
+      alertBox.className = `system-alert ${type}`;
+      alertBox.style.display = "block";
+      setTimeout(() => { alertBox.style.display = "none"; }, 3500);
+    }
 
     function validateUsername() {
       const value = userIdInput.value.trim();
@@ -72,7 +102,7 @@
     }
 
     function validatePassword() {
-      const value = passwordInput.value;
+      const value = passwordInput.value.trim();
       if (value.length === 0) { setValidationState(passwordGroup, passwordMessage, "invalid", "La contraseña es requerida"); return false; }
       if (value.length < 4) { setValidationState(passwordGroup, passwordMessage, "invalid", "Mínimo 4 caracteres"); return false; }
       setValidationState(passwordGroup, passwordMessage, "valid", "Contraseña válida"); return true;
@@ -85,8 +115,6 @@
     }
 
     async function login() {
-
-      // limpiar alertas previas
       userGroup.classList.remove("invalid");
       passwordGroup.classList.remove("invalid");
       userMessage.textContent = "";
@@ -108,29 +136,24 @@
           const rol = data.user.rol;
           localStorage.setItem("rol", rol);
 
-          if (rol === "admin") window.location.href = "Interfaz.html";
-          else if (rol === "supervisor") window.location.href = "InterfazSupervisor.html";
-          else if (rol === "cajero") window.location.href = "SistemaVentasCajero.html";
-          else alert("⚠️ Rol no reconocido");
+          showSystemAlert("Inicio de sesión correcto", "success");
+
+          setTimeout(()=>{
+            if (rol === "admin") window.location.href = "Interfaz.html";
+            else if (rol === "supervisor") window.location.href = "InterfazSupervisor.html";
+            else if (rol === "cajero") window.location.href = "SistemaVentasCajero.html";
+            else showSystemAlert("Rol no reconocido", "error");
+          },800);
 
         } else {
-          // ERROR VISUAL ROJO
-          userMessage.textContent = "Usuario o contraseña incorrectos";
-          userMessage.className = "validation-message invalid";
-
-          passwordMessage.textContent = "Usuario o contraseña incorrectos";
-          passwordMessage.className = "validation-message invalid";
-
-          userGroup.classList.add("invalid");
-          passwordGroup.classList.add("invalid");
-
+          showSystemAlert("Usuario o contraseña incorrectos", "error");
           userIdInput.value = "";
           passwordInput.value = "";
           loginBtn.disabled = true;
         }
       } catch (error) {
         console.error("Error backend:", error);
-        alert("❌ No se pudo conectar con el servidor Node");
+        showSystemAlert("No se pudo conectar con el servidor Node", "error");
       }
     }
 
@@ -139,6 +162,7 @@
       const validPass = validatePassword();
       loginBtn.disabled = !(validUser && validPass);
     }
+
     loginBtn.addEventListener("click", login);
   </script>
 </body>
