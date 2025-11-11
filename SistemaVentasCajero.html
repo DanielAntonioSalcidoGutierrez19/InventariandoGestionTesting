@@ -5,7 +5,176 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Ventas - Inventario</title>
   <link rel="stylesheet" href="./front/styles.css" />
+  <style>
+    /* ======= AJUSTES VISUALES ======= */
+
+    .search-box {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 10px 12px;
+      z-index: 2;
+      border-bottom: 1px solid #eef2f7;
+    }
+    #searchProducts {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 10px;
+      outline: none;
+      font-size: 14px;
+      background: #ffffff;
+      transition: border-color .15s ease, box-shadow .15s ease;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%2399a3ad" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85Zm-5.242.656a5 5 0 1 1 0-10a5 5 0 0 1 0 10Z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: 12px center;
+      background-size: 16px;
+    }
+    #searchProducts:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96,165,250,.25);
+    }
+
+    /* Panel derecho */
+    .cart-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .cart-title {
+      padding: 12px 14px;
+      border-bottom: 1px solid #eef2f7;
+    }
+    .cart-items {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 10px 12px 90px;
+      box-sizing: border-box;
+    }
+
+    /* Barra total dentro del panel derecho */
+    .checkout-bar {
+      position: sticky;
+      bottom: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      padding: 12px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.06);
+      display: none;            /* visible solo cuando hay items */
+      margin-top: 15px;
+      z-index: 3;
+    }
+    .checkout-inner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      max-width: 90%;
+      margin: 0 auto;
+    }
+    .total-strong {
+      font-size: 15px;
+      color: #111827;
+      font-weight: 800;
+    }
+    .total-strong .label {
+      font-weight: 700;
+      color: #374151;
+      margin-right: 6px;
+    }
+
+    /* Botón ticket */
+    .btn-ticket-right {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      background: #2196f3;
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform .06s ease, box-shadow .15s ease;
+      box-shadow: 0 2px 8px rgba(33,150,243,.25);
+    }
+    .btn-ticket-right:hover { background:#1d86d9; }
+    .btn-ticket-right:active { transform: scale(.98); }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    .payment-btn {
+      background-color: #2196f3 !important;
+      color: #fff !important;
+      border: 2px solid #1976d2 !important;
+    }
+    .payment-btn.active-payment {
+      background: #2ecc71 !important;
+      border-color: #27ae60 !important;
+      box-shadow: 0 0 15px rgba(46,204,113,.7);
+    }
+
+    .stock-warning {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #fff3cd;
+      color: #856404;
+      border: 2px solid #ffeeba;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,.3);
+      z-index: 10000;
+      font-weight: bold;
+      animation: fadeIn .4s ease;
+    }
+    @keyframes fadeIn {
+      from {opacity:0; transform:translateY(20px);}
+      to {opacity:1; transform:translateY(0);}
+    }
+
+    /* 🔹 reducir espacio blanco sobre los productos */
+    .products-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 40px;
+  margin-top: 20px !important;   /* 🔹 bajamos un poco los productos */
+}
+
+    body { overflow-x: hidden; }
+
+    /* ✅ AJUSTE: alinear alturas de panel izquierdo y ticket */
+    .sales-container {
+      display: flex;
+      align-items: stretch;
+    }
+    .categories-panel {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 60px);  /* 60px aprox altura de la navbar */
+      overflow: hidden;
+    }
+/* 🔧 Ajuste de altura para mostrar más productos visibles */
+.products-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 40px;
+  margin-top: 40px !important;
+  height: calc(80vh - 350px) !important; /* 🔹 aumenta el área visible */
+}
+
+
+.categories-grid {
+  margin-bottom: 20px !important; /* 🔹 espacio extra entre categorías y productos */
+}
+
+  </style>
 </head>
+
 <body>
   <!-- Barra superior -->
   <div class="navbar">
@@ -19,6 +188,7 @@
 
   <!-- Contenedor principal -->
   <div class="sales-container">
+    <!-- Panel izquierdo -->
     <div class="categories-panel" id="categoriesPanel">
       <div class="search-box">
         <input type="text" placeholder="🔍 Búsqueda de productos..." id="searchProducts" />
@@ -41,18 +211,18 @@
     <div class="cart-panel">
       <div class="cart-title">TICKET DE VENTA</div>
       <div class="cart-items" id="cartItems"></div>
+
+      <!-- Barra total fija y botón ticket -->
+      <div class="checkout-bar" id="checkoutBar">
+        <div class="checkout-inner">
+          <div class="total-strong">
+            <span class="label">TOTAL A PAGAR:</span>
+            <span id="totalAmount">$0.00</span>
+          </div>
+          <button class="btn-ticket-right" onclick="generateTicket()">TICKET</button>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <!-- Panel total -->
-  <div class="total-panel">
-    <div class="total-label">TOTAL A PAGAR</div>
-    <div class="total-amount" id="totalAmount">$0.00</div>
-  </div>
-
-  <!-- Botón ticket -->
-  <div class="ticket-button-right">
-    <button class="btn-ticket-right" onclick="generateTicket()">TICKET</button>
   </div>
 
   <!-- Modal del ticket -->
@@ -62,7 +232,11 @@
         <h2>TICKET DE VENTA</h2>
         <button class="close-btn" onclick="closeTicketModal()">&times;</button>
       </div>
-      <div class="ticket-content" id="ticketContent"></div>
+
+      <div class="ticket-content" id="ticketContent" style="text-align:center;">
+        <!-- Logo arriba -->
+        <img src="./front/img/inventariando.jpg" alt="inventariando" style="width:110px; margin-bottom:8px; opacity:0.85;">
+      </div>
 
       <div class="payment-methods">
         <div class="payment-title">MÉTODO DE PAGO</div>
@@ -82,6 +256,7 @@
         </div>
       </div>
 
+      <!-- Botones centrados -->
       <div class="modal-buttons">
         <button class="modal-btn btn-cancel" onclick="closeTicketModal()">CERRAR</button>
         <button class="modal-btn btn-print" onclick="registerAndPrint()">IMPRIMIR</button>
@@ -89,14 +264,20 @@
     </div>
   </div>
 
-  <!-- ====================== -->
-  <!-- SCRIPT PRINCIPAL -->
-  <!-- ====================== -->
+  <!-- ======= SCRIPT PRINCIPAL ======= -->
   <script>
-    // FILTRAR POR CATEGORIA
-    function filterByCategory(category) {
-      const filtered = productos.filter(p => p.tipo === category);
-      renderProducts(filtered);
+    // === helpers de sesión (si los usas después puedes pegarlos aquí) ===
+    function getLoggedUserId() {
+      const raw = localStorage.getItem("id_usuario");
+      const n = raw !== null ? parseInt(raw, 10) : null;
+      return Number.isNaN(n) ? null : n;
+    }
+    function ensureLoggedOrWarn() {
+      const id = getLoggedUserId();
+      if (id === null) {
+        showSystemWarning("⚠️ No se detecta usuario en sesión. Inicia sesión de nuevo.");
+      }
+      return id;
     }
 
     const API_PRODUCTOS = "http://localhost:3000/api/productos";
@@ -110,7 +291,11 @@
     let cashAmount = 0;
     let change = 0;
 
+    // para doble clic de categoría
+    let currentCategory = "";
+
     document.addEventListener("DOMContentLoaded", async () => {
+      ensureLoggedOrWarn();
       await loadProducts();
       hookSearch();
     });
@@ -163,6 +348,18 @@
         div.addEventListener("click", () => addToCartElement(div));
         container.appendChild(div);
       });
+    }
+
+    // FILTRAR POR CATEGORIA (con doble clic para limpiar)
+    function filterByCategory(category) {
+      if (currentCategory === category) {
+        currentCategory = "";
+        renderProducts(productos);
+        return;
+      }
+      currentCategory = category;
+      const filtered = productos.filter(p => p.tipo === category);
+      renderProducts(filtered);
     }
 
     function hookSearch() {
@@ -231,6 +428,7 @@
     function updateCartDisplay() {
       const cartItemsContainer = document.getElementById("cartItems");
       const totalAmountElement = document.getElementById("totalAmount");
+      const bar = document.getElementById("checkoutBar");
       cartItemsContainer.innerHTML = "";
       total = 0;
       cart.forEach((item) => {
@@ -252,6 +450,7 @@
         cartItemsContainer.appendChild(cartItemElement);
       });
       totalAmountElement.textContent = `$${total.toFixed(2)}`;
+      bar.style.display = cart.length > 0 ? "block" : "none";
     }
 
     // ➕ Aumentar cantidad
@@ -296,15 +495,13 @@
       btnTransfer.classList.remove("active-payment");
 
       if (method === "efectivo") {
-        // marcar EFECTIVO seleccionado
         btnCash.classList.add("active-payment");
         cashContainer.style.display = "block";
         changeDisplay.style.display = "none";
       } else if (method === "transferencia") {
-        // toggle TRANSFERENCIA
         if (btnTransfer.classList.contains("active-payment")) {
           btnTransfer.classList.remove("active-payment");
-          selectedPaymentMethod = ""; // des-selecciona si se vuelve a dar click
+          selectedPaymentMethod = "";
         } else {
           btnTransfer.classList.add("active-payment");
         }
@@ -325,10 +522,8 @@
         changeDisplay.style.display = "block";
 
         if (change < 0) {
-          // faltante
           changeDisplay.innerHTML = `FALTAN: $<span id="changeAmount">${Math.abs(change).toFixed(2)}</span>`;
         } else {
-          // cambio
           changeDisplay.innerHTML = `CAMBIO: $<span id="changeAmount">${change.toFixed(2)}</span>`;
         }
       } else {
@@ -336,51 +531,47 @@
       }
     }
 
-    // 🧾 Ticket
+    // 🧾 Ticket (preview)
     function generateTicket() {
       if (cart.length === 0) return showSystemWarning("🛒 No hay productos en el carrito");
       const ticket = document.getElementById("ticketContent");
+      // reconstruimos contenido para evitar duplicados
+      ticket.innerHTML = `<img src="./front/img/inventariando.jpg" alt="inventariando" style="width:110px; margin-bottom:8px; opacity:0.85;">`;
       let html = `<div style="text-align:center"><h3>TIENDA</h3><p>${new Date().toLocaleString()}</p></div>`;
       cart.forEach((i) => {
         html += `<div class="ticket-item"><span>${i.name} x${i.quantity}</span><span>$${i.subtotal.toFixed(2)}</span></div>`;
       });
       html += `<div class="ticket-total"><span>TOTAL:</span><span>$${total.toFixed(2)}</span></div>`;
-      ticket.innerHTML = html;
+      ticket.innerHTML += html;
       document.getElementById("ticketModal").style.display = "flex";
     }
 
-    // 🧾 Registrar venta + imprimir
+    // 🧾 Registrar venta
     async function registerAndPrint() {
       if (!selectedPaymentMethod) return showSystemWarning("Selecciona un método de pago");
 
-      // validar EFECTIVO ANTES DE ENVIAR AL BACKEND
+      // Validar EFECTIVO antes
       if (selectedPaymentMethod === "efectivo") {
         const input = document.getElementById("cashAmount");
         cashAmount = parseFloat(input.value) || 0;
-
-        if (cashAmount <= 0) {
-          showSystemWarning("Ingresa el monto entregado en efectivo");
-          return;
-        }
-        if (cashAmount < total) {
-          const faltan = (total - cashAmount).toFixed(2);
-          showSystemWarning(`Faltan $${faltan} pesos.`);
-          return;
-        }
+        if (cashAmount <= 0) return showSystemWarning("Ingresa el monto entregado en efectivo");
+        if (cashAmount < total) return showSystemWarning(`Faltan $${(total - cashAmount).toFixed(2)} pesos.`);
       }
 
       try {
         const productosVenta = cart.map(i => ({
-          id_producto: parseInt(i.id),
+          id_producto: parseInt(i.id, 10),
           cantidad: i.quantity,
           precio_unitario: i.price
         }));
+
+        const idUsuario = getLoggedUserId(); // si existe
 
         const response = await fetch(API_VENTA, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id_usuario: 1,
+            id_usuario: idUsuario ?? null,
             metodo_pago: selectedPaymentMethod,
             productos: productosVenta
           })
@@ -390,16 +581,13 @@
 
         showSystemWarning("✅ Venta registrada correctamente");
 
-        // limpiar estado: carrito, método de pago, efectivo
         cart = [];
         updateCartDisplay();
 
-        // limpiar método de pago y visual
         selectedPaymentMethod = "";
         document.querySelector(".btn-cash").classList.remove("active-payment");
         document.querySelector(".btn-transfer").classList.remove("active-payment");
 
-        // limpiar efectivo
         const input = document.getElementById("cashAmount");
         input.value = "";
         cashAmount = 0;
@@ -409,6 +597,7 @@
 
         closeTicketModal();
         await loadProducts();
+
       } catch (err) {
         console.error(err);
         showSystemWarning("❌ Error al registrar venta");
@@ -419,41 +608,5 @@
       document.getElementById("ticketModal").style.display = "none";
     }
   </script>
-
-  <style>
-    .stock-warning {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #fff3cd;
-      color: #856404;
-      border: 2px solid #ffeeba;
-      padding: 15px 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      z-index: 9999;
-      animation: fadeIn 0.4s ease;
-      font-weight: bold;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* color base de ambos botones (AZUL) */
-    .payment-btn {
-      background-color: #2196f3 !important;
-      color: white !important;
-      border: 2px solid #1976d2 !important;
-    }
-
-    /* color cuando está seleccionado (VERDE) */
-    .payment-btn.active-payment {
-      background-color: #2ecc71 !important;
-      color: #fff !important;
-      border: 2px solid #27ae60 !important;
-      box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
-    }
-  </style>
 </body>
 </html>

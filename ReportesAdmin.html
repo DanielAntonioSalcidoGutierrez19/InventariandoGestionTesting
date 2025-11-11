@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Administrador - Sistema de Inventario</title>
-      <link rel="stylesheet" href="./front/styles.css">
+  <link rel="stylesheet" href="./front/styles.css">
 </head>
 <body>
   <!-- Barra superior -->
@@ -38,47 +38,27 @@
         <div class="dato-valor">$0.00 mx</div>
       </div>
     </div>
-    
-    <!--div class="etiqueta-fecha">FECHA</div -->
 
-    <!-- Tickets dia aparecerán aqui dinámicamente -->
-
-    <!-- Botones de acción -->
     <div class="botones-accion">
-      <button class="btn-accion btn-imprimir">
-        🖨️ IMPRIMIR REPORTE
-      </button>
-      <button class="btn-accion btn-fecha btn-fecha-reportes">
-        📅 MODIFICAR FECHA
-      </button>
+      <button class="btn-accion btn-imprimir">🖨️ IMPRIMIR REPORTE</button>
+      <button class="btn-accion btn-fecha btn-fecha-reportes">📅 MODIFICAR FECHA</button>
     </div>
   </div>
 
-  <!-- Sección de Ranking de Artículos -->
+  <!-- Sección de Ranking -->
   <div class="seccion" id="seccion-ranking">
     <div class="fecha-seccion" id="fecha-ranking">--/--/----</div>
     <div class="titulo-seccion">Ranking de artículos</div>
-    
     <div class="lista-articulos"></div>
-    
     <div class="total-ranking">TOTAL: $0.00 mx</div>
-    
-    <!--div class="etiqueta-fecha">FECHA</div -->
-    
-    <!-- Tickets del día aparecerán aquí también -->
 
-    <!-- Botones de acción -->
     <div class="botones-accion">
-      <button class="btn-accion btn-imprimir">
-        🖨️ IMPRIMIR RANKING
-      </button>
-      <button class="btn-accion btn-fecha btn-fecha-ranking">
-        📅 MODIFICAR FECHA
-      </button>
+      <button class="btn-accion btn-imprimir">🖨️ IMPRIMIR RANKING</button>
+      <button class="btn-accion btn-fecha btn-fecha-ranking">📅 MODIFICAR FECHA</button>
     </div>
   </div>
 
-  <!-- Modal para modificar fecha -->
+  <!-- Modal -->
   <div class="modal" id="modal-fecha">
     <div class="modal-contenido">
       <div class="modal-titulo">Modificar Fecha</div>
@@ -90,183 +70,153 @@
     </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const btnReportes = document.getElementById('btn-reportes');
-      const btnRanking = document.getElementById('btn-ranking');
-      const seccionReportes = document.getElementById('seccion-reportes');
-      const seccionRanking = document.getElementById('seccion-ranking');
-      const btnImprimir = document.querySelectorAll('.btn-imprimir');
-      const btnFechaReportes = document.querySelector('.btn-fecha-reportes');
-      const btnFechaRanking = document.querySelector('.btn-fecha-ranking');
-      const modalFecha = document.getElementById('modal-fecha');
-      const btnCancelar = document.getElementById('btn-cancelar');
-      const btnConfirmar = document.getElementById('btn-confirmar');
-      const nuevaFecha = document.getElementById('nueva-fecha');
-      const fechaReportes = document.getElementById('fecha-reportes');
-      const fechaRanking = document.getElementById('fecha-ranking');
-      
-      let seccionActual = 'reportes'; // default
+<script>
 
-      // Mostrar sección de reportes
-      btnReportes.addEventListener('click', function() {
-        seccionReportes.classList.add('activa');
-        seccionRanking.classList.remove('activa');
-        seccionActual = 'reportes';
-      });
-      
-      // Mostrar sección de ranking
-      btnRanking.addEventListener('click', function() {
-        seccionRanking.classList.add('activa');
-        seccionReportes.classList.remove('activa');
-        seccionActual = 'ranking';
-      });
+// formateo real sin timezone shift
+function isoToDMY(iso){
+  const [y,m,d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
 
-      btnImprimir.forEach(btn => {
-        btn.addEventListener('click', function() {
-          window.print();
-        });
-      });
+document.addEventListener('DOMContentLoaded', function() {
 
-      btnFechaReportes.addEventListener('click', function() {
-        modalFecha.style.display = 'flex';
-        seccionActual = 'reportes';
-      });
+  const btnReportes = document.getElementById('btn-reportes');
+  const btnRanking = document.getElementById('btn-ranking');
+  const seccionReportes = document.getElementById('seccion-reportes');
+  const seccionRanking = document.getElementById('seccion-ranking');
+  const btnImprimir = document.querySelectorAll('.btn-imprimir');
+  const btnFechaReportes = document.querySelector('.btn-fecha-reportes');
+  const btnFechaRanking = document.querySelector('.btn-fecha-ranking');
+  const modalFecha = document.getElementById('modal-fecha');
+  const btnCancelar = document.getElementById('btn-cancelar');
+  const btnConfirmar = document.getElementById('btn-confirmar');
+  const nuevaFecha = document.getElementById('nueva-fecha');
+  const fechaReportes = document.getElementById('fecha-reportes');
+  const fechaRanking = document.getElementById('fecha-ranking');
+  
+  let seccionActual = 'reportes';
 
-      btnFechaRanking.addEventListener('click', function() {
-        modalFecha.style.display = 'flex';
-        seccionActual = 'ranking';
-      });
+  btnReportes.addEventListener('click',()=>{ seccionReportes.classList.add('activa'); seccionRanking.classList.remove('activa'); seccionActual='reportes';});
+  btnRanking.addEventListener('click',()=>{ seccionRanking.classList.add('activa'); seccionReportes.classList.remove('activa'); seccionActual='ranking';});
 
-      btnCancelar.addEventListener('click', function(){
-        modalFecha.style.display = 'none';
-      });
+  btnImprimir.forEach(btn=> btn.addEventListener('click',()=> window.print()));
 
-      btnConfirmar.addEventListener('click', async function(){
-        const fechaISO = nuevaFecha.value;
-        
-        const fecha = new Date(fechaISO);
-        const dia = String(fecha.getDate()).padStart(2,'0');
-        const mes = String(fecha.getMonth()+1).padStart(2,'0');
-        const año = fecha.getFullYear();
+  btnFechaReportes.addEventListener('click',()=>{ modalFecha.style.display='flex'; seccionActual='reportes';});
+  btnFechaRanking.addEventListener('click',()=>{ modalFecha.style.display='flex'; seccionActual='ranking';});
 
-        if(seccionActual === 'reportes'){
-          fechaReportes.textContent = `${dia}/${mes}/${año}`;
-          await cargarReporteDiario(fechaISO);
-        } else {
-          fechaRanking.textContent = `${dia}/${mes}/${año}`;
-          await cargarRankingDia(fechaISO);
-        }
+  btnCancelar.addEventListener('click',()=> modalFecha.style.display='none');
 
-        await cargarTicketsDia(fechaISO);
+  btnConfirmar.addEventListener('click',async function(){
+      const fechaISO = nuevaFecha.value;
+      const texto = isoToDMY(fechaISO);
 
-        modalFecha.style.display = 'none';
-      });
+      if(seccionActual === 'reportes'){
+        fechaReportes.textContent = texto;
+        await cargarReporteDiario(fechaISO);
+      } else {
+        fechaRanking.textContent = texto;
+        await cargarRankingDia(fechaISO);
+      }
 
-      window.addEventListener('click',function(event){
-        if(event.target === modalFecha){
-          modalFecha.style.display = 'none';
-        }
-      });
-    });
-  </script>
+      await cargarTicketsDia(fechaISO);
 
-  <!-- SEGUNDO SCRIPT REAL DATA -->
- <script>
-  const API = "http://localhost:3000/api/venta";
+      modalFecha.style.display='none';
+  });
 
-  function ensureTicketContainer(seccionID){
-    const seccion = document.getElementById(seccionID);
+  window.addEventListener('click',function(e){
+    if(e.target===modalFecha) modalFecha.style.display='none';
+  });
 
-    if(seccionID !== "seccion-reportes") return null;
+});
+</script>
 
-    if(!seccion.querySelector('.tickets-block')){
-      const d = document.createElement("div");
-      d.className="tickets-block";
-      d.innerHTML = `
-        <div class="titulo-seccion" style="margin-top:15px">Tickets del día</div>
-        <div class="tickets-lista"></div>
-      `;
-      seccion.appendChild(d);
-    }
-    return seccion.querySelector('.tickets-lista');
+<script>
+const API = "http://localhost:3000/api/venta";
+
+function ensureTicketContainer(seccionID){
+  const seccion = document.getElementById(seccionID);
+  if(seccionID !== "seccion-reportes") return null;
+  if(!seccion.querySelector('.tickets-block')){
+    const d = document.createElement("div");
+    d.className="tickets-block";
+    d.innerHTML = `
+      <div class="titulo-seccion" style="margin-top:15px">Tickets del día</div>
+      <div class="tickets-lista"></div>`;
+    seccion.appendChild(d);
   }
+  return seccion.querySelector('.tickets-lista');
+}
 
-  async function cargarReporteDiario(fechaISO){
-    const r = await fetch(API + "/reporte-dia/" + fechaISO);
-    const data = await r.json();
-    document.querySelector("#seccion-reportes .dato:nth-child(1) .dato-valor").textContent =
-      (data.tickets||0)+" uds";
-    document.querySelector("#seccion-reportes .dato:nth-child(2) .dato-valor").textContent =
-      "$"+Number(data.total||0).toFixed(2)+"mx";
-  }
+async function cargarReporteDiario(fechaISO){
+  const r = await fetch(API+"/reporte-dia/"+fechaISO);
+  const data = await r.json();
+  document.querySelector("#seccion-reportes .dato:nth-child(1) .dato-valor").textContent = (data.tickets||0)+" uds";
+  document.querySelector("#seccion-reportes .dato:nth-child(2) .dato-valor").textContent = "$"+Number(data.total||0).toFixed(2)+"mx";
+}
 
-  async function cargarRankingDia(fechaISO){
-    const r = await fetch(API + "/ranking-dia/" + fechaISO);
-    const data = await r.json();
-    const lista = document.querySelector(".lista-articulos");
-    lista.innerHTML="";
-    let total=0;
-    data.forEach(item=>{
-      total+=Number(item.total_monto);
-      const div=document.createElement("div");
-      div.className="articulo";
-      div.innerHTML=`
-        <div class="nombre-articulo">${item.nombre}</div>
-        <div class="cantidad-articulo">${item.total_vendido} uds</div>
-        <div class="precio-articulo">$${Number(item.total_monto).toFixed(2)}mx</div>
-      `;
-      lista.appendChild(div);
-    })
-    document.querySelector(".total-ranking").textContent="TOTAL: $"+total.toFixed(2)+"mx";
-  }
+async function cargarRankingDia(fechaISO){
+  const r = await fetch(API+"/ranking-dia/"+fechaISO);
+  const data = await r.json();
+  const lista = document.querySelector(".lista-articulos");
+  lista.innerHTML="";
+  let total=0;
+  data.forEach(item=>{
+    total+=Number(item.total_monto);
+    const div=document.createElement("div");
+    div.className="articulo";
+    div.innerHTML=`
+      <div class="nombre-articulo">${item.nombre}</div>
+      <div class="cantidad-articulo">${item.total_vendido} uds</div>
+      <div class="precio-articulo">$${Number(item.total_monto).toFixed(2)}mx</div>`;
+    lista.appendChild(div);
+  });
+  document.querySelector(".total-ranking").textContent="TOTAL: $"+total.toFixed(2)+"mx";
+}
 
-  async function cargarTicketsDia(fechaISO){
-    const r = await fetch(API + "/tickets-dia/" + fechaISO);
-    const data = await r.json();
+async function cargarTicketsDia(fechaISO){
+  const r = await fetch(API+"/tickets-dia/"+fechaISO);
+  const data = await r.json();
+  const listaRep = ensureTicketContainer("seccion-reportes");
+  if(!listaRep) return;
+  listaRep.innerHTML="";
+  data.forEach(t=>{
+    const f=new Date(t.fecha_venta);
+    const hh=String(f.getHours()).padStart(2,'0');
+    const mm=String(f.getMinutes()).padStart(2,'0');
+    const ss=String(f.getSeconds()).padStart(2,'0');
 
-    const listaRep = ensureTicketContainer("seccion-reportes");
-    if(!listaRep) return;
-    listaRep.innerHTML="";
+    const row=document.createElement("div");
+    row.className="ticketrow";
+    row.style.display="grid";
+    row.style.gridTemplateColumns="200px 120px 120px";
+    row.style.columnGap="15px";
+    row.style.alignItems="center";
+    row.style.padding="6px 0";
+    row.style.borderBottom="1px solid #ddd";
+    row.innerHTML=`
+      <div style="font-weight:bold">${t.folio}</div>
+      <div style="text-align:center">${hh}:${mm}:${ss}</div>
+      <div style="text-align:right">$${Number(t.total).toFixed(2)} mx</div>`;
+    listaRep.appendChild(row);
+  });
+}
 
-    data.forEach(t=>{
-      const f=new Date(t.fecha_venta);
-      const hh=String(f.getHours()).padStart(2,'0');
-      const mm=String(f.getMinutes()).padStart(2,'0');
-      const ss=String(f.getSeconds()).padStart(2,'0');
+document.addEventListener("DOMContentLoaded",async()=>{
+  const hoy=new Date();
+  const y=hoy.getFullYear();
+  const m=String(hoy.getMonth()+1).padStart(2,'0');
+  const d=String(hoy.getDate()).padStart(2,'0');
+  const fechaISO=`${y}-${m}-${d}`;
 
-     const row=document.createElement("div");
-row.className="ticketrow";
-row.style.display = "grid";
-row.style.gridTemplateColumns = "200px 120px 120px";
-row.style.columnGap = "15px";
-row.style.alignItems = "center";
-row.style.padding = "6px 0";
-row.style.borderBottom = "1px solid #ddd";
-row.innerHTML = `
-  <div style="font-weight:bold">${t.folio}</div>
-  <div style="text-align:center">${hh}:${mm}:${ss}</div>
-  <div style="text-align:right">$${Number(t.total).toFixed(2)} mx</div>
-`;
-listaRep.appendChild(row);
+  const texto=isoToDMY(fechaISO);
 
-    });
-  }
+  document.getElementById("fecha-reportes").textContent=texto;
+  document.getElementById("fecha-ranking").textContent=texto;
 
-  document.addEventListener("DOMContentLoaded",async()=>{
-    const hoy=new Date();
-    const y=hoy.getFullYear();
-    const m=String(hoy.getMonth()+1).padStart(2,'0');
-    const d=String(hoy.getDate()).padStart(2,'0');
-    const fechaISO=`${y}-${m}-${d}`;
-
-    document.getElementById("fecha-reportes").textContent=`${d}/${m}/${y}`;
-    document.getElementById("fecha-ranking").textContent=`${d}/${m}/${y}`;
-
-    await cargarReporteDiario(fechaISO);
-    await cargarRankingDia(fechaISO);
-    await cargarTicketsDia(fechaISO);
-  })
+  await cargarReporteDiario(fechaISO);
+  await cargarRankingDia(fechaISO);
+  await cargarTicketsDia(fechaISO);
+});
 </script>
 
 </body>

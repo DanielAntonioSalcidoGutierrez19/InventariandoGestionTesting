@@ -48,16 +48,8 @@
       display: none;
       margin-bottom: 15px;
     }
-
-    .system-alert.error {
-      background-color: #ffb3b3;
-      color: #8b0000;
-    }
-
-    .system-alert.success {
-      background-color: #b3ffb6;
-      color: #006400;
-    }
+    .system-alert.error { background-color: #ffb3b3; color: #8b0000; }
+    .system-alert.success { background-color: #b3ffb6; color: #006400; }
   </style>
 
   <script>
@@ -74,10 +66,12 @@
       userIdInput.value = "";
       passwordInput.value = "";
       localStorage.removeItem("rol");
+      localStorage.removeItem("id_usuario");
     };
 
     userIdInput.addEventListener("input", () => { validateUsername(); updateLoginButton(); });
     passwordInput.addEventListener("input", () => { validatePassword(); updateLoginButton(); });
+
     togglePasswordBtn.addEventListener("click", () => {
       const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
       passwordInput.setAttribute("type", type);
@@ -133,17 +127,20 @@
         const data = await response.json();
 
         if (data.success) {
-          const rol = data.user.rol;
+          const { id_usuario, rol } = data.user;
+
+          // 👉 Guardar ambos datos en localStorage
           localStorage.setItem("rol", rol);
+          localStorage.setItem("id_usuario", String(id_usuario));
 
           showSystemAlert("Inicio de sesión correcto", "success");
 
-          setTimeout(()=>{
+          setTimeout(()=> {
             if (rol === "admin") window.location.href = "Interfaz.html";
-            else if (rol === "supervisor") window.location.href = "InterfazSupervisor.html";
+            else if (rol === "supervisor") window.location.href = "Interfazsupervisor.html";
             else if (rol === "cajero") window.location.href = "SistemaVentasCajero.html";
             else showSystemAlert("Rol no reconocido", "error");
-          },800);
+          }, 800);
 
         } else {
           showSystemAlert("Usuario o contraseña incorrectos", "error");
