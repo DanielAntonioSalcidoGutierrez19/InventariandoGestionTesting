@@ -11,8 +11,10 @@
   <div class="navbar">
     <h1>SISTEMA DE INVENTARIO</h1>
     <div class="menu">
-      <a href="SistemaVentasCajero.html">VENTA</a>
-      <a href="ReportesCajero.html">REPORTES</a>
+      <a href="Interfaz.html">INVENTARIO</a>
+      <a href="SistemaVentasAdmin.html">VENTA</a>
+      <a href="ReportesAdmin.html">REPORTES</a>
+      <a href="Usuarios.html">USUARIOS</a>
       <a href="index.html">⮐ SALIR</a>
     </div>
   </div>
@@ -68,154 +70,8 @@
     </div>
   </div>
 
-<script>
+<script src="./front/reportes.js"></script>
 
-// formateo real sin timezone shift
-function isoToDMY(iso){
-  const [y,m,d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-
-  const btnReportes = document.getElementById('btn-reportes');
-  const btnRanking = document.getElementById('btn-ranking');
-  const seccionReportes = document.getElementById('seccion-reportes');
-  const seccionRanking = document.getElementById('seccion-ranking');
-  const btnImprimir = document.querySelectorAll('.btn-imprimir');
-  const btnFechaReportes = document.querySelector('.btn-fecha-reportes');
-  const btnFechaRanking = document.querySelector('.btn-fecha-ranking');
-  const modalFecha = document.getElementById('modal-fecha');
-  const btnCancelar = document.getElementById('btn-cancelar');
-  const btnConfirmar = document.getElementById('btn-confirmar');
-  const nuevaFecha = document.getElementById('nueva-fecha');
-  const fechaReportes = document.getElementById('fecha-reportes');
-  const fechaRanking = document.getElementById('fecha-ranking');
-  
-  let seccionActual = 'reportes';
-
-  btnReportes.addEventListener('click',()=>{ seccionReportes.classList.add('activa'); seccionRanking.classList.remove('activa'); seccionActual='reportes';});
-  btnRanking.addEventListener('click',()=>{ seccionRanking.classList.add('activa'); seccionReportes.classList.remove('activa'); seccionActual='ranking';});
-
-  btnImprimir.forEach(btn=> btn.addEventListener('click',()=> window.print()));
-
-  btnFechaReportes.addEventListener('click',()=>{ modalFecha.style.display='flex'; seccionActual='reportes';});
-  btnFechaRanking.addEventListener('click',()=>{ modalFecha.style.display='flex'; seccionActual='ranking';});
-
-  btnCancelar.addEventListener('click',()=> modalFecha.style.display='none');
-
-  btnConfirmar.addEventListener('click',async function(){
-      const fechaISO = nuevaFecha.value;
-      const texto = isoToDMY(fechaISO);
-
-      if(seccionActual === 'reportes'){
-        fechaReportes.textContent = texto;
-        await cargarReporteDiario(fechaISO);
-      } else {
-        fechaRanking.textContent = texto;
-        await cargarRankingDia(fechaISO);
-      }
-
-      await cargarTicketsDia(fechaISO);
-
-      modalFecha.style.display='none';
-  });
-
-  window.addEventListener('click',function(e){
-    if(e.target===modalFecha) modalFecha.style.display='none';
-  });
-
-});
-</script>
-
-<script>
-const API = "http://localhost:3000/api/venta";
-
-function ensureTicketContainer(seccionID){
-  const seccion = document.getElementById(seccionID);
-  if(seccionID !== "seccion-reportes") return null;
-  if(!seccion.querySelector('.tickets-block')){
-    const d = document.createElement("div");
-    d.className="tickets-block";
-    d.innerHTML = `
-      <div class="titulo-seccion" style="margin-top:15px">Tickets del día</div>
-      <div class="tickets-lista"></div>`;
-    seccion.appendChild(d);
-  }
-  return seccion.querySelector('.tickets-lista');
-}
-
-async function cargarReporteDiario(fechaISO){
-  const r = await fetch(API+"/reporte-dia/"+fechaISO);
-  const data = await r.json();
-  document.querySelector("#seccion-reportes .dato:nth-child(1) .dato-valor").textContent = (data.tickets||0)+" uds";
-  document.querySelector("#seccion-reportes .dato:nth-child(2) .dato-valor").textContent = "$"+Number(data.total||0).toFixed(2)+"mx";
-}
-
-async function cargarRankingDia(fechaISO){
-  const r = await fetch(API+"/ranking-dia/"+fechaISO);
-  const data = await r.json();
-  const lista = document.querySelector(".lista-articulos");
-  lista.innerHTML="";
-  let total=0;
-  data.forEach(item=>{
-    total+=Number(item.total_monto);
-    const div=document.createElement("div");
-    div.className="articulo";
-    div.innerHTML=`
-      <div class="nombre-articulo">${item.nombre}</div>
-      <div class="cantidad-articulo">${item.total_vendido} uds</div>
-      <div class="precio-articulo">$${Number(item.total_monto).toFixed(2)}mx</div>`;
-    lista.appendChild(div);
-  });
-  document.querySelector(".total-ranking").textContent="TOTAL: $"+total.toFixed(2)+"mx";
-}
-
-async function cargarTicketsDia(fechaISO){
-  const r = await fetch(API+"/tickets-dia/"+fechaISO);
-  const data = await r.json();
-  const listaRep = ensureTicketContainer("seccion-reportes");
-  if(!listaRep) return;
-  listaRep.innerHTML="";
-  data.forEach(t=>{
-    const f=new Date(t.fecha_venta);
-    const hh=String(f.getHours()).padStart(2,'0');
-    const mm=String(f.getMinutes()).padStart(2,'0');
-    const ss=String(f.getSeconds()).padStart(2,'0');
-
-    const row=document.createElement("div");
-    row.className="ticketrow";
-    row.style.display="grid";
-    row.style.gridTemplateColumns="200px 120px 120px";
-    row.style.columnGap="15px";
-    row.style.alignItems="center";
-    row.style.padding="6px 0";
-    row.style.borderBottom="1px solid #ddd";
-    row.innerHTML=`
-      <div style="font-weight:bold">${t.folio}</div>
-      <div style="text-align:center">${hh}:${mm}:${ss}</div>
-      <div style="text-align:right">$${Number(t.total).toFixed(2)} mx</div>`;
-    listaRep.appendChild(row);
-  });
-}
-
-document.addEventListener("DOMContentLoaded",async()=>{
-  const hoy=new Date();
-  const y=hoy.getFullYear();
-  const m=String(hoy.getMonth()+1).padStart(2,'0');
-  const d=String(hoy.getDate()).padStart(2,'0');
-  const fechaISO=`${y}-${m}-${d}`;
-
-  const texto=isoToDMY(fechaISO);
-
-  document.getElementById("fecha-reportes").textContent=texto;
-  document.getElementById("fecha-ranking").textContent=texto;
-
-  await cargarReporteDiario(fechaISO);
-  await cargarRankingDia(fechaISO);
-  await cargarTicketsDia(fechaISO);
-});
-</script>
 
 </body>
 </html>
