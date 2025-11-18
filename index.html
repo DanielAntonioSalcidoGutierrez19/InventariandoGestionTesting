@@ -52,7 +52,115 @@
     .system-alert.success { background-color: #b3ffb6; color: #006400; }
   </style>
 
-  <script src="./front/index.js"></script>
+  <script>
+    const userIdInput = document.getElementById("userId");
+    const passwordInput = document.getElementById("password");
+    const togglePasswordBtn = document.getElementById("togglePassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const userGroup = document.getElementById("userGroup");
+    const passwordGroup = document.getElementById("passwordGroup");
+    const userMessage = document.getElementById("userMessage");
+    const passwordMessage = document.getElementById("passwordMessage");
 
+    window.onload = () => {
+      userIdInput.value = "";
+      passwordInput.value = "";
+      localStorage.removeItem("rol");
+      localStorage.removeItem("id_usuario");
+    };
+
+    userIdInput.addEventListener("input", () => { validateUsername(); updateLoginButton(); });
+    passwordInput.addEventListener("input", () => { validatePassword(); updateLoginButton(); });
+
+    togglePasswordBtn.addEventListener("click", () => {
+      const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+      passwordInput.setAttribute("type", type);
+      togglePasswordBtn.textContent = type === "password" ? "👁️" : "🔒";
+    });
+
+    document.addEventListener("keydown", (e) => { if (e.key === "Enter" && !loginBtn.disabled) login(); });
+
+    function showSystemAlert(message, type = "error") {
+      const alertBox = document.getElementById("systemAlert");
+      alertBox.textContent = message;
+      alertBox.className = `system-alert ${type}`;
+      alertBox.style.display = "block";
+      setTimeout(() => { alertBox.style.display = "none"; }, 3500);
+    }
+
+    function validateUsername() {
+      const value = userIdInput.value.trim();
+      if (value.length === 0) { setValidationState(userGroup, userMessage, "invalid", "El nombre de usuario es requerido"); return false; }
+      if (value.length < 3) { setValidationState(userGroup, userMessage, "invalid", "Mínimo 3 caracteres"); return false; }
+      setValidationState(userGroup, userMessage, "valid", "Usuario válido"); return true;
+    }
+
+    function validatePassword() {
+      const value = passwordInput.value.trim();
+      if (value.length === 0) { setValidationState(passwordGroup, passwordMessage, "invalid", "La contraseña es requerida"); return false; }
+      if (value.length < 4) { setValidationState(passwordGroup, passwordMessage, "invalid", "Mínimo 4 caracteres"); return false; }
+      setValidationState(passwordGroup, passwordMessage, "valid", "Contraseña válida"); return true;
+    }
+
+    function setValidationState(group, message, state, text) {
+      group.className = `form-group ${state}`;
+      message.className = `validation-message ${state}`;
+      message.textContent = text;
+    }
+
+    async function login() {
+      userGroup.classList.remove("invalid");
+      passwordGroup.classList.remove("invalid");
+      userMessage.textContent = "";
+      passwordMessage.textContent = "";
+
+      const nombre_usuario = userIdInput.value.trim();
+      const contraseña = passwordInput.value.trim();
+
+      try {
+        const response = await fetch("http://localhost:3000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre_usuario, contraseña }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          const { id_usuario, rol } = data.user;
+
+          // 👉 Guardar ambos datos en localStorage
+          localStorage.setItem("rol", rol);
+          localStorage.setItem("id_usuario", String(id_usuario));
+
+          showSystemAlert("Inicio de sesión correcto", "success");
+
+          setTimeout(()=> {
+            if (rol === "admin") window.location.href = "Interfaz.html";
+            else if (rol === "supervisor") window.location.href = "Interfazsupervisor.html";
+            else if (rol === "cajero") window.location.href = "SistemaVentasCajero.html";
+            else showSystemAlert("Rol no reconocido", "error");
+          }, 800);
+
+        } else {
+          showSystemAlert("Usuario o contraseña incorrectos", "error");
+          userIdInput.value = "";
+          passwordInput.value = "";
+          loginBtn.disabled = true;
+        }
+      } catch (error) {
+        console.error("Error backend:", error);
+        showSystemAlert("No se pudo conectar con el servidor Node", "error");
+      }
+    }
+
+    function updateLoginButton() {
+      const validUser = validateUsername();
+      const validPass = validatePassword();
+      loginBtn.disabled = !(validUser && validPass);
+    }
+
+    loginBtn.addEventListener("click", login);
+  </script>
 </body>
 </html>
